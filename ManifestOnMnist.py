@@ -34,31 +34,27 @@ def construct_kernels(X, y, kernel_scale_factor) -> list[np.ndarray]:
 (X, y) = (np.concatenate((X1, X2)), np.concatenate((y1, y2)))
 
 
-X = np.concatenate((X[(y == 0), :][:n_samples_each_class, :, :],
-                    X[(y == 1), :][:n_samples_each_class, :, :],
-                    X[(y == 2), :][:n_samples_each_class, :, :],
-                    X[(y == 3), :][:n_samples_each_class, :, :],
-                    X[(y == 4), :][:n_samples_each_class, :, :],
-                    X[(y == 5), :][:n_samples_each_class, :, :],
-                    X[(y == 6), :][:n_samples_each_class, :, :],
-                    X[(y == 7), :][:n_samples_each_class, :, :],
-                    X[(y == 8), :][:n_samples_each_class, :, :],
-                    X[(y == 9), :][:n_samples_each_class, :, :]))
+X = [X[(y == i), :][:n_samples_each_class, :, :] for i in range(10)]
+y = [y[(y == i)][:n_samples_each_class] for i in range(10)]
+score_list = []
+idx_list = []
+eig_vecs_list = []
 
-y = np.concatenate((y[(y == 0)][:n_samples_each_class],
-                    y[(y == 1)][:n_samples_each_class],
-                    y[(y == 2)][:n_samples_each_class],
-                    y[(y == 3)][:n_samples_each_class],
-                    y[(y == 4)][:n_samples_each_class],
-                    y[(y == 5)][:n_samples_each_class],
-                    y[(y == 6)][:n_samples_each_class],
-                    y[(y == 7)][:n_samples_each_class],
-                    y[(y == 8)][:n_samples_each_class],
-                    y[(y == 9)][:n_samples_each_class]))
+for i in range(10):
+    for j in range(i+1, 10):
+        X_cat = np.concatenate((X[i], X[j]))
+        y_cat = np.concatenate((y[i], y[j]))
+        X_cat = (X_cat.reshape(X_cat.shape[0], -1) / 255)
 
-X = X.reshape(X.shape[0], -1) / 255
-k = construct_kernels(X, y, 1)
+        # Train-test split
+        X_train, X_test, y_train, y_test = train_test_split(X_cat, y_cat, test_size=0.25, stratify=y_cat, random_state=random_state)
 
+        # ManiFeSt Score
+        use_spsd = True  # False - use SPD form  - default is SPSD, MNIST is SPSD since there are blank pixels
+        kernel_scale_factor = 1  # The RBF kernel scale is typically set to the median of the Euclidean distances up to some scalar defiend by kernel_scale_factor ,  default value 1
+        score, idx, eig_vecs = ManiFeSt(X_train, y_train, kernel_scale_factor=kernel_scale_factor,
+                                        use_spsd=use_spsd)  # use_spsd=use_spsd
 
-#Train-test split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, stratify=y, random_state=random_state)
+        score_list.append(score)
+        idx_list.append(idx)
+        eig_vecs_list.append(eig_vecs)
