@@ -14,7 +14,7 @@ import numpy as np
 from sklearn.metrics.pairwise import euclidean_distances
 
 
-def construct_kernel(X, y, kernel_scale_factor):
+def construct_kernel(X, y, percentile):
     label = list(set(y))
     x_1 = X[np.where(y == label[0])]
     x_2 = X[np.where(y == label[1])]
@@ -22,12 +22,12 @@ def construct_kernel(X, y, kernel_scale_factor):
     K1_dis = euclidean_distances(np.transpose(x_1))
     K2_dis = euclidean_distances(np.transpose(x_2))
 
-    epsilon1 = kernel_scale_factor * np.median(K1_dis[~np.eye(K1_dis.shape[0], dtype=bool)])
-    epsilon2 = kernel_scale_factor * np.median(K2_dis[~np.eye(K2_dis.shape[0], dtype=bool)])
+    epsilon1 = np.percentile(K1_dis[~np.eye(K1_dis.shape[0], dtype=bool)], percentile)
+    epsilon2 = np.percentile(K2_dis[~np.eye(K2_dis.shape[0], dtype=bool)], percentile)
 
     K1 = np.exp(-(K1_dis ** 2) / (2 * epsilon1 ** 2))
     K2 = np.exp(-(K2_dis ** 2) / (2 * epsilon2 ** 2))
-
+    ev = np.linalg.eigvalsh(K1)
     return K1, K2
 
 
@@ -170,8 +170,8 @@ def compute_manifest_score(D):
     return score
 
 
-def ManiFeSt2(X, y, t:float = 0.5, kernel_scale_factor: int = 1, use_spsd=True):
-    K1, K2 = construct_kernel(X, y, kernel_scale_factor)
+def ManiFeSt2(X, y, t:float = 0.5, percentile: float = 50, use_spsd=True):
+    K1, K2 = construct_kernel(X, y, percentile)
 
     M, D = get_operators(K1, K2, use_spsd=use_spsd)
 
