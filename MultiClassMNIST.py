@@ -12,6 +12,7 @@ from sklearn.metrics import accuracy_score
 
 from ManiFeSt import ManiFeSt
 from Manifest2 import ManiFeSt2, construct_kernel
+from SpsdMean import SpsdMean
 
 
 # General Params
@@ -39,5 +40,13 @@ for i in range(10):
     y_test[position: position+test_count] = i
     position += test_count
 
+# Compute kernels
 kernels = construct_kernel(x_train, y_train)
+
+# Compute minimal rank in our kernels
+r = min([np.linalg.matrix_rank(K) for K in kernels])
+
+# Compute M from kernels
+kernels = np.stack(kernels, axis=2)
+M = SpsdMean(kernels, r=r)
 print()
