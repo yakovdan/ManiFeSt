@@ -14,21 +14,18 @@ import numpy as np
 from sklearn.metrics.pairwise import euclidean_distances
 
 
-def construct_kernel(X, y, percentile):
-    label = list(set(y))
-    x_1 = X[np.where(y == label[0])]
-    x_2 = X[np.where(y == label[1])]
+def construct_kernel(X, y, percentile=50):
+    labels = list(set(y))
+    kernels = []
 
-    K1_dis = euclidean_distances(np.transpose(x_1))
-    K2_dis = euclidean_distances(np.transpose(x_2))
-
-    epsilon1 = np.percentile(K1_dis[~np.eye(K1_dis.shape[0], dtype=bool)], percentile)
-    epsilon2 = np.percentile(K2_dis[~np.eye(K2_dis.shape[0], dtype=bool)], percentile)
-
-    K1 = np.exp(-(K1_dis ** 2) / (2 * epsilon1 ** 2))
-    K2 = np.exp(-(K2_dis ** 2) / (2 * epsilon2 ** 2))
-    ev = np.linalg.eigvalsh(K1)
-    return K1, K2
+    for i in range(len(labels)):
+        elements = X[y == i].shape[0]
+        x = X[y == i].reshape(elements, -1)
+        K_dis = euclidean_distances(np.transpose(x))
+        epsilon = np.percentile(K_dis[~np.eye(K_dis.shape[0], dtype=bool)], percentile)
+        K = np.exp(-(K_dis ** 2) / (2 * epsilon ** 2))
+        kernels.append(K)
+    return kernels
 
 
 def calc_tol(matrix, var_type='float64', energy_tol=0):

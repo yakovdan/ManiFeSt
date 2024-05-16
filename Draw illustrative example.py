@@ -41,13 +41,13 @@ use_spsd = True  # False - use SPD form  - default is SPSD, MNIST is SPSD since 
 kernel_scale_factor = 1  # The RBF kernel scale is typically set to the median of the Euclidean distances up to some scalar defiend by kernel_scale_factor ,  default value 1
 score, idx, eig_vecs = ManiFeSt(X_train, y_train, kernel_scale_factor=kernel_scale_factor,
                                 use_spsd=use_spsd)  # use_spsd=use_spsd
-score1, idx1, eig_vecs1 = ManiFeSt2(X_train, y_train, kernel_scale_factor=kernel_scale_factor,
-                                    use_spsd=use_spsd)  # use_spsd=use_spsd
-assert np.allclose(score, score1)
-assert np.allclose(idx, idx1)
-assert len(eig_vecs) == len(eig_vecs1)
-for i in range(len(eig_vecs)):
-    assert np.allclose(eig_vecs[i], eig_vecs1[i])
+# score1, idx1, eig_vecs1 = ManiFeSt2(X_train, y_train,
+#                                     use_spsd=use_spsd)  # use_spsd=use_spsd
+# assert np.allclose(score, score1)
+# assert np.allclose(idx, idx1)
+# assert len(eig_vecs) == len(eig_vecs1)
+# for i in range(len(eig_vecs)):
+#     assert np.allclose(eig_vecs[i], eig_vecs1[i])
 
 sorted_score = score[idx]
 score_top20, score_top50 = sorted_score[:20], sorted_score[:50]

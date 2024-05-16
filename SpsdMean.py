@@ -4,7 +4,7 @@ from GrassmanMean import GrassmanMean
 from SpdMean import SpdMean
 from Symm import Symm
 from scipy.sparse.linalg import eigs
-
+import scipy as sp
 def SpsdMean(CC, r, mG=None):
     N = CC.shape[-1]
     d = CC.shape[0]
