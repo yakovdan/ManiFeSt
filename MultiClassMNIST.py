@@ -1,5 +1,6 @@
 
 
+import cupy as cp
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
@@ -11,8 +12,10 @@ from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
 
 from ManiFeSt import ManiFeSt
-from Manifest2 import ManiFeSt2, construct_kernel
+from Manifest2 import ManiFeSt2, construct_kernel, spsd_geodesics
 from SpsdMean import SpsdMean
+from tools import *
+from pymanopt.manifolds import Grassmann
 
 
 # General Params
@@ -40,13 +43,35 @@ for i in range(10):
     y_test[position: position+test_count] = i
     position += test_count
 
+
 # Compute kernels
 kernels = construct_kernel(x_train, y_train)
 
 # Compute minimal rank in our kernels
-r = min([np.linalg.matrix_rank(K) for K in kernels])
-
+r = min([np.linalg.matrix_rank(K, tol=5e-3) for K in kernels])
+print(f"r: {r}")
 # Compute M from kernels
-kernels = np.stack(kernels, axis=2)
-M = SpsdMean(kernels, r=r)
+kernels = np.stack(kernels, axis=0)
+kernels = cp.array(kernels)
+#M, mG, mP, UU, TT = SpsdMean(kernels, r=r)
+M, mG, mP, UU, TT = cp.load('M.cpy.npy'), cp.load('mG.cpy.npy'), cp.load('mP.cpy.npy'), cp.load('UU.cpy.npy'), cp.load('TT.cpy.npy')
+
+
+N = kernels.shape[0]
+
+G_, _, _, _, _ = spsd_geodesics(M, kernels, 1, r)
+logP_ = log_map(mP[None, :], TT)
+D_ = symmetrize(G_ @ logP_ @ cp.swapaxes(G_, -1, -2))
+eigvals, eigvecs = cp.linalg.eigh(D_)
+eigvecs_square = cp.square(eigvecs)
+eigvals_abs = cp.expand_dims(cp.abs(eigvals), axis=1)
+r = eigvals_abs * eigvecs_square
+r = r.sum(axis=2)
+score = cp.sum(r, axis=0)
+idx = cp.argsort(score, axis=0)[::-1]
+idx_top50 = idx[:50]
+top50_features = [(x // 28, x % 28) for x in idx_top50]
+from ManifestOnBinaryMnist import visualize_digit
+visualize_digit(x_train.reshape(3000, -1), 100, top50_features)
+
 print()

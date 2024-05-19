@@ -1,34 +1,32 @@
 
-import numpy as np
+import cupy as cp
 import scipy as sp
 from Symm import Symm
+from tqdm import trange
+from tools import matrix_log, matrix_exp, matrix_pow
+import numpy as np
 
 def SpdMean(PP, vW=None):
-    Np = PP.shape[-1] # len(PP)
-
+    Np = PP.shape[0]  # len(PP)
     if vW is None:
-        vW = np.ones(Np) / Np
+        vW = cp.ones((Np, 1, 1)) / Np
 
     if Np == 1:
         M = PP
         return M
 
-    M = np.mean(PP, axis=2)
+    M = cp.mean(PP, axis=0, keepdims=True)
 
-    for ii in range(50):
-        A = sp.linalg.sqrtm(M)
-        B = np.linalg.inv(A)
+    for _ in trange(50):
+        A = matrix_pow(M, 0.5)
+        B = cp.linalg.inv(A)
+        BCB = Symm(B @ PP @ B)
+        S = (vW * (A @ matrix_log(BCB) @ A)).sum(axis=0, keepdims=True)
+        M = Symm(A @ matrix_exp(Symm(B @ S @ B)) @ A)
+        eps = cp.linalg.norm(S[0], ord='fro')
 
-        S = np.zeros(M.shape)
-        for jj in range(Np):
-            C = PP[:, :, jj]
-            BCB = Symm(B @ C @ B)
-            S = S + vW[jj] * (A @ sp.linalg.logm(BCB) @ A)
-
-        M = Symm(A @ sp.linalg.expm(Symm(B @ S @ B)) @ A)
-
-        eps = np.linalg.norm(S, ord='fro')
-        if (eps < 1e-10):
+        if eps < 1e-10:
             break
+    print(f"Finished SPD Mean with norm: {eps}")
 
-    return M
+    return M[0]

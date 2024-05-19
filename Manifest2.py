@@ -10,9 +10,16 @@ Created on
 import scipy.io
 
 import numpy as np
-
+import cupy as cp
 from sklearn.metrics.pairwise import euclidean_distances
 
+
+def construct_multidiag(arr):
+    assert arr.ndim == 2
+    diag_out = cp.zeros(shape=(arr.shape[0], arr.shape[1], arr.shape[1]))
+    id = cp.arange(arr.shape[1])
+    diag_out[:, id, id] = arr[:, id]
+    return diag_out
 
 def construct_kernel(X, y, percentile=50):
     labels = list(set(y))
@@ -38,52 +45,49 @@ def calc_tol(matrix, var_type='float64', energy_tol=0):
 
 def spsd_geodesics(G1, G2, p=0.5, r=None, eigVecG1=None, eigValG1=None, eigVecG2=None, eigValG2=None):
     if eigVecG1 is None:
-        eigValG1, eigVecG1 = np.linalg.eigh(G1)
+        eigValG1, eigVecG1 = cp.linalg.eigh(G1)
     if eigVecG2 is None:
-        eigValG2, eigVecG2 = np.linalg.eigh(G2)
+        eigValG2, eigVecG2 = cp.linalg.eigh(G2)
 
     if r is None:
         tol = calc_tol(eigValG1)
-        rank_G1 = len(np.abs(eigValG1)[np.abs(eigValG1) > tol])
+        rank_G1 = len(cp.abs(eigValG1)[cp.abs(eigValG1) > tol])
 
         tol = calc_tol(eigValG2)
-        rank_G2 = len(np.abs(eigValG2)[np.abs(eigValG2) > tol])
+        rank_G2 = len(cp.abs(eigValG2)[cp.abs(eigValG2) > tol])
 
         r = min(rank_G1, rank_G2)
 
-    maxIndciesG1 = np.flip(np.argsort(np.abs(eigValG1))[-r:], [0])
+    maxIndciesG1 = cp.flip(cp.argsort(cp.abs(eigValG1))[-r:], 0)
     V1 = eigVecG1[:, maxIndciesG1]
     lambda1 = eigValG1[maxIndciesG1]
 
-    maxIndciesG2 = np.flip(np.argsort(np.abs(eigValG2))[-r:], [0])
-    V2 = eigVecG2[:, maxIndciesG2]
-    lambda2 = eigValG2[maxIndciesG2]
+    maxIndciesG2 = cp.flip(cp.argsort(cp.abs(eigValG2))[:, -r:], 1)
+    lambda2 = cp.take_along_axis(eigValG2, maxIndciesG2, 1)
+    maxIndciesG2 = cp.expand_dims(maxIndciesG2, 1)
+    V2 = cp.take_along_axis(eigVecG2, maxIndciesG2, axis=2)
 
-    # lapack_driver='gesvd' is more stable while lapack_driver='gesdd' is more fast
-    try:
-        O2, sigma, O1T = np.linalg.svd(V2.T @ V1)
-    except:
-        O2, sigma, O1T = scipy.linalg.svd(V2.T @ V1, lapack_driver='gesvd')
-
-    O1 = O1T.T
+    O2, sigma, O1T = cp.linalg.svd(cp.swapaxes(V2, -1, -2) @ V1)
+    O1 = cp.swapaxes(O1T, -1, -2)
 
     sigma[sigma < -1] = -1
     sigma[sigma > 1] = 1
-    theta = np.arccos(sigma)
+    theta = cp.arccos(sigma)
 
     U1 = V1 @ O1
-    R1 = O1.T @ np.diag(lambda1) @ O1
+    R1 = cp.swapaxes(O1, -1, -2) @ cp.diag(lambda1) @ O1
 
+    lambda2_diag = construct_multidiag(lambda2)
     U2 = V2 @ O2
-    R2 = O2.T @ np.diag(lambda2) @ O2
+    R2 = cp.swapaxes(O2, -1, -2) @ lambda2_diag @ O2
 
-    tol = calc_tol(sigma)
-    valid_ind = np.where(np.abs(sigma - 1) > tol)
-    pinv_sin_theta = np.zeros(theta.shape)
-    pinv_sin_theta[valid_ind] = 1 / np.sin(theta[valid_ind])
+    tol = calc_tol(sigma.get())
+    valid_ind = cp.where(cp.abs(sigma - 1) > tol)
+    pinv_sin_theta = cp.zeros(theta.shape)
+    pinv_sin_theta[valid_ind] = 1 / cp.sin(theta[valid_ind])
 
-    UG1G2 = U1 @ np.diag(np.cos(theta * p)) + (np.eye(G1.shape[0]) - U1 @ U1.T) @ U2 @ np.diag(
-        pinv_sin_theta) @ np.diag(np.sin(theta * p))
+    UG1G2 = U1 @ construct_multidiag(cp.cos(theta * p)) + (cp.eye(G1.shape[0]) - U1 @ cp.swapaxes(U1, -1, -2)) @ U2 @ construct_multidiag(
+        pinv_sin_theta) @ construct_multidiag(cp.sin(theta * p))
 
     return UG1G2, R1, R2, O1, lambda1
 

@@ -40,7 +40,7 @@ def extract_digits(X_arr, y_arr, digit_0: int, digit_1: int) -> tuple[np.ndarray
     return x_selected_digits, y_selected_digits
 
 
-def visualize_digit(digit_array: np.ndarray, digit_idx: int, resize_factor: int = 3) -> None:
+def visualize_digit(digit_array: np.ndarray, digit_idx: int, feature_coords, resize_factor: int = 3) -> None:
     fig, ax = plt.subplots(1)
     ax.set_aspect('equal')
 
@@ -50,7 +50,7 @@ def visualize_digit(digit_array: np.ndarray, digit_idx: int, resize_factor: int 
     ax.imshow(digit, cmap='gray')
 
     # Now, loop through coord arrays, and create a circle at each x,y pair
-    for yy, xx in feature_coords_top50:
+    for yy, xx in feature_coords:
         circ = Circle((resize_factor * xx, resize_factor * yy), 1, color='red', fill=False)
         ax.add_patch(circ)
 
@@ -126,7 +126,7 @@ if __name__ == "__main__":
     x_train_DIGIT_0 = X_train[np.where(y_train == DIGIT_0)]
     eigVecD, eigValD, eigVecM, eigValM = eig_vecs
 
-    visualize_digit(x_train_DIGIT_1, 30)
+    visualize_digit(x_train_DIGIT_1, 30, feature_coords_top50)
 
 
     X_test_fs = X_test[:, idx_top50]
