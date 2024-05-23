@@ -14,12 +14,14 @@ def GrassmanMean(GG, vW=None):
     M = Grassmann(D, d)
 
     mMeanP = GG[0]
-    maxIter = 200
+    maxIter = 400
 
-    for _ in trange(maxIter):
+    for count in trange(maxIter):
         mLogMean = (vW * M.log(mMeanP, GG)).sum(axis=0)
         mMeanP = M.exp(mMeanP, mLogMean)
         vNorm = cp.linalg.norm(mLogMean, ord='fro')
+        if count % 100 == 0:
+            print(f"Iteration {count}: {vNorm}")
         if vNorm < 1e-10:
             break
 
