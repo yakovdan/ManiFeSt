@@ -21,6 +21,7 @@ def construct_multidiag(arr):
     diag_out[:, id, id] = arr[:, id]
     return diag_out
 
+
 def construct_kernel(X, y, percentile=50):
     labels = list(set(y))
     kernels = []
@@ -29,7 +30,10 @@ def construct_kernel(X, y, percentile=50):
         elements = X[y == i].shape[0]
         x = X[y == i].reshape(elements, -1)
         K_dis = euclidean_distances(np.transpose(x))
-        epsilon = np.percentile(K_dis[~np.eye(K_dis.shape[0], dtype=bool)], percentile)
+        #epsilon = np.percentile(K_dis[~np.eye(K_dis.shape[0], dtype=bool)], percentile)
+        #perc = np.percentile(K_dis[~np.eye(K_dis.shape[0], dtype=bool)], percentile)
+        med = np.median(K_dis[~np.eye(K_dis.shape[0], dtype=bool)])
+        epsilon = percentile * med
         K = np.exp(-(K_dis ** 2) / (2 * epsilon ** 2))
         kernels.append(K)
     return kernels
