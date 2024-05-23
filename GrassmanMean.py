@@ -14,7 +14,7 @@ def GrassmanMean(GG, vW=None):
     M = Grassmann(D, d)
 
     mMeanP = GG[0]
-    maxIter = 400
+    maxIter = 200
 
     for count in trange(maxIter):
         mLogMean = (vW * M.log(mMeanP, GG)).sum(axis=0)

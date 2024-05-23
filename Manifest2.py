@@ -31,9 +31,10 @@ def construct_kernel(X, y, percentile=50):
         x = X[y == i].reshape(elements, -1)
         K_dis = euclidean_distances(np.transpose(x))
         #epsilon = np.percentile(K_dis[~np.eye(K_dis.shape[0], dtype=bool)], percentile)
-        #perc = np.percentile(K_dis[~np.eye(K_dis.shape[0], dtype=bool)], percentile)
-        med = np.median(K_dis[~np.eye(K_dis.shape[0], dtype=bool)])
-        epsilon = percentile * med
+        perc = np.percentile(K_dis[~np.eye(K_dis.shape[0], dtype=bool)], percentile)
+        #med = np.median(K_dis[~np.eye(K_dis.shape[0], dtype=bool)])
+        epsilon = perc
+
         K = np.exp(-(K_dis ** 2) / (2 * epsilon ** 2))
         kernels.append(K)
     return kernels
