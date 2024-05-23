@@ -10,24 +10,27 @@ from tqdm import trange
 def SpsdMean(CC, r, mG=None):
     N = CC.shape[0]
     d = CC.shape[1]
-    UU = np.zeros((N, d, r))
-    EE = np.zeros((N, r))
+    #UU = np.zeros((N, d, r))
 
-    X = Symm(CC)
-    for ii in trange(N):
-        [EE[ii], UU[ii]] = eigs(X[ii].get(), r, return_eigenvectors=True)
+    EE, UU = cp.linalg.eigh(Symm(CC))
+    UU = cp.flip(UU[:, :, -r:], axis=2)
+    # for ii in trange(N):
+    #
+    #     _, a = eigs(Symm(np.copy(CC[ii].get())), r, return_eigenvectors=True)
+    #     #assert np.all(np.imag(a) == 0)
+    #     UU[ii] = np.real(a)
 
-    UU = cp.array(UU)
+    #UU = cp.array(UU)
     if mG is None:
         mG = GrassmanMean(UU)
 
     TT = cp.zeros((N, r, r))
     max_cond_num = 0
     for ii in trange(N):
-        Xi = CC[ii]
+        Xi = Symm(CC[ii])
         Ui = UU[ii]
         [Oi, _, OWi] = cp.linalg.svd(Ui.T @ mG, compute_uv=True)
-        GOi = Ui @ Oi @ OWi
+        GOi = Ui @ Oi @ OWi.T
         Ti = GOi.T @ Xi @ GOi
         TT[ii] = Symm(Ti)
         evals, evecs = cp.linalg.eigh(TT[ii])
