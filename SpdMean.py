@@ -17,14 +17,15 @@ def SpdMean(PP, vW=None):
 
     M = cp.mean(PP, axis=0, keepdims=True)
 
-    for _ in trange(50):
+    for c in trange(200):
         A = matrix_pow(M, 0.5)
         B = cp.linalg.inv(A)
         BCB = Symm(B @ PP @ B)
         S = (vW * (A @ matrix_log(BCB) @ A)).sum(axis=0, keepdims=True)
         M = Symm(A @ matrix_exp(Symm(B @ S @ B)) @ A)
         eps = cp.linalg.norm(S[0], ord='fro')
-
+        if c % 100 == 0:
+            print(f"Iteration: {c}, eps: {eps}")
         if eps < 1e-10:
             break
     print(f"Finished SPD Mean with norm: {eps}")
