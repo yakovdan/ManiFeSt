@@ -32,7 +32,7 @@ C_range = np.power(2 * np.ones_like(C_range, dtype=np.float64), C_range)
 gamma_range = np.arange(-15, 6, 3)
 gamma_range = np.power(2 * np.ones_like(gamma_range, dtype=np.float64), gamma_range)
 param_grid = dict(gamma=gamma_range, C=C_range)
-
+accuracies = []
 for exp_idx in range(1):
 
     # Randomize data
@@ -68,6 +68,7 @@ for exp_idx in range(1):
     for cur_percentile in PERCENTILES:
         print(f"Percentile {cur_percentile}")
         # Compute kernels
+
         kernels = construct_kernel(x_train, y_train, cur_percentile)
 
         # Compute minimal rank in our kernels
@@ -95,7 +96,7 @@ for exp_idx in range(1):
         idx_top50 = idx[:50]#cp.random.choice(cp.arange(784), size=50, replace=False)#idx[:50]
         top50_features = [(x // 28, x % 28) for x in idx_top50]
 
-        #visualize_digit(x_train.reshape(3000, -1), 100, top50_features)
+        visualize_digit(score.get().reshape((1, 28, 28)), 0, top50_features)
 
         # Define ranges for C and gamma parameters of SVM
 
@@ -110,6 +111,7 @@ for exp_idx in range(1):
             best_estimator = grid.best_estimator_
             best_features_idx = idx_top50
             best_params = grid.best_params_
+
             print("Found new best SVM")
         print(
             f"Percentile: {cur_percentile}\t The best parameters are {grid.best_params_} with a score of %{ 100* grid.best_score_:.5f}")
@@ -121,7 +123,8 @@ for exp_idx in range(1):
     y_target = best_estimator.predict(x_test_fs)
     accuracy = (y_test_fs == y_target).sum() / y_target.shape[0]
     print(f"Final accuracy: {accuracy}")
+    accuracies.append(accuracy)
     # print(
     #     f"Test: {best_percentile_for_estimator}\t Test Accuracy: {accuracy_score(y_test_fs, best_estimator.predict(X_test_fs)):.5f}")
 
-print()
+print(sum(accuracies) / len(accuracies))
