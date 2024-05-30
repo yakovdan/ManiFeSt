@@ -111,7 +111,8 @@ for exp_idx in range(1):
             best_estimator = grid.best_estimator_
             best_features_idx = idx_top50
             best_params = grid.best_params_
-
+            cp.save('bestM', M)
+            cp.save('bestD', D_)
             print("Found new best SVM")
         print(
             f"Percentile: {cur_percentile}\t The best parameters are {grid.best_params_} with a score of %{ 100* grid.best_score_:.5f}")
