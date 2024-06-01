@@ -26,7 +26,7 @@ def construct_kernel(X, y, percentile=50):
     labels = list(set(y))
     kernels = []
 
-    for i in range(len(labels)):
+    for i in labels:
         elements = X[y == i].shape[0]
         x = X[y == i].reshape(elements, -1)
         K_dis = euclidean_distances(np.transpose(x))

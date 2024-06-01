@@ -19,12 +19,12 @@ def SpdMean(PP, vW=None):
 
     for c in trange(200):
         A = matrix_pow(M, 0.5)
-        B = cp.linalg.inv(A)
+        B = matrix_pow(M, -0.5)
         BCB = Symm(B @ PP @ B)
         S = (vW * (A @ matrix_log(BCB) @ A)).sum(axis=0, keepdims=True)
         M = Symm(A @ matrix_exp(Symm(B @ S @ B)) @ A)
         eps = cp.linalg.norm(S[0], ord='fro')
-        if c % 100 == 0:
+        if c % 20 == 0:
             print(f"Iteration: {c}, eps: {eps}")
         if eps < 1e-10:
             break

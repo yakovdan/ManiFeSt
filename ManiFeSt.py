@@ -192,4 +192,4 @@ def ManiFeSt(X, y, kernel_scale_factor=1, use_spsd=True):
 
     eig_vecs = (eigVecD, eigValD, eigVecM, eigValM)
 
-    return score, idx, eig_vecs
+    return score, idx, eig_vecs, K1, K2, M

@@ -40,18 +40,21 @@ def extract_digits(X_arr, y_arr, digit_0: int, digit_1: int) -> tuple[np.ndarray
     return x_selected_digits, y_selected_digits
 
 
-def visualize_digit(digit_array: np.ndarray, digit_idx: int, feature_coords, resize_factor: int = 3) -> None:
+def visualize_digit(digit_array: np.ndarray, digit_idx: int, feature_coords, resize_factor: int = 1) -> None:
     fig, ax = plt.subplots(1)
     ax.set_aspect('equal')
 
     # Show the image
-    digit = digit_array[digit_idx, :].reshape(28, 28)
-    digit = cv2.resize(digit, dsize=(28*resize_factor, 28*resize_factor), interpolation=cv2.INTER_CUBIC)
-    ax.imshow(digit, cmap='gray')
+    digit = digit_array.reshape(28, 28).get()
+    #digit = cv2.resize(digit, dsize=(28*resize_factor, 28*resize_factor), interpolation=cv2.INTER_CUBIC)
+    ax.imshow(digit)
 
     # Now, loop through coord arrays, and create a circle at each x,y pair
-    for yy, xx in feature_coords:
-        circ = Circle((resize_factor * xx, resize_factor * yy), 1, color='red', fill=False)
+    for yy, xx in feature_coords[:20]:
+        circ = Circle((resize_factor * xx, resize_factor * yy), 0.5, color='yellow', fill=False)
+        ax.add_patch(circ)
+    for yy, xx in feature_coords[20:]:
+        circ = Circle((resize_factor * xx, resize_factor * yy), 0.5, color='red', fill=False)
         ax.add_patch(circ)
 
     plt.show()

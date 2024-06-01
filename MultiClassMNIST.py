@@ -58,7 +58,7 @@ for exp_idx in range(1):
 
 
     # folds for SVM
-    cv = KFold(n_splits=10, shuffle=True, random_state=42)
+    cv = KFold(n_splits=10, shuffle=True)#, random_state=42)
     best_accuracy = 0
     best_features_idx = None
     best_percentile_for_estimator = None
@@ -77,7 +77,6 @@ for exp_idx in range(1):
         kernels = np.stack(kernels, axis=0)
         kernels = cp.array(kernels)
         M, mG, mP, UU, TT = SpsdMean(kernels, r=min_rank)
-        #M, mG, mP, UU, TT = cp.load('M.cpy.npy'), cp.load('mG.cpy.npy'), cp.load('mP.cpy.npy'), cp.load('UU.cpy.npy'), cp.load('TT.cpy.npy')
 
 
         N = kernels.shape[0]
@@ -93,10 +92,21 @@ for exp_idx in range(1):
         score = cp.max(r, axis=0)
         idx = cp.argsort(score, axis=0)[::-1]
         idx_top50 = idx[:50]#cp.random.choice(cp.arange(784), size=50, replace=False)#idx[:50]
+        cp.save(f'M_{cur_percentile}_1', M)
+        cp.save(f'mG_{cur_percentile}_1', mG)
+        cp.save(f'mP_{cur_percentile}_1', mP)
+        cp.save(f'UU_{cur_percentile}_1', UU)
+        cp.save(f'TT_{cur_percentile}_1', TT)
+        cp.save(f'G_{cur_percentile}_1', G_)
+        cp.save(f'D_{cur_percentile}_1', D_)
+        cp.save(f'score_{cur_percentile}_1', score)
+        cp.save(f'idx_{cur_percentile}_1', idx)
+
         top50_features = [(x // 28, x % 28) for x in idx_top50]
 
-        #visualize_digit(x_train.reshape(3000, -1), 100, top50_features)
-
+        visualize_digit(cp.abs(score), 100, top50_features)
+        plt.imshow(cp.abs(eigvecs[4, :, -1]).get().reshape(28, 28))
+        plt.show()
         # Define ranges for C and gamma parameters of SVM
 
         x_fs = x_train.reshape(x_train.shape[0], -1)[:, idx_top50.get()]

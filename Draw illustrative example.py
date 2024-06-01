@@ -15,8 +15,10 @@ from sklearn.model_selection import train_test_split, KFold, GridSearchCV
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
 
+import cupy as cp
 from ManiFeSt import ManiFeSt
-from Manifest2 import ManiFeSt2
+from Manifest2 import construct_kernel, spsd_geodesics
+from SpsdMean import SpsdMean
 
 # %%  ManiFeSt Score
 
@@ -39,16 +41,12 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, strati
 # ManiFeSt Score
 use_spsd = True  # False - use SPD form  - default is SPSD, MNIST is SPSD since there are blank pixels
 kernel_scale_factor = 1  # The RBF kernel scale is typically set to the median of the Euclidean distances up to some scalar defiend by kernel_scale_factor ,  default value 1
-score, idx, eig_vecs = ManiFeSt(X_train, y_train, kernel_scale_factor=kernel_scale_factor,
+score, idx, eig_vecs, K1, K2, M = ManiFeSt(X_train, y_train, kernel_scale_factor=kernel_scale_factor,
                                 use_spsd=use_spsd)  # use_spsd=use_spsd
-# score1, idx1, eig_vecs1 = ManiFeSt2(X_train, y_train,
-#                                     use_spsd=use_spsd)  # use_spsd=use_spsd
-# assert np.allclose(score, score1)
-# assert np.allclose(idx, idx1)
-# assert len(eig_vecs) == len(eig_vecs1)
-# for i in range(len(eig_vecs)):
-#     assert np.allclose(eig_vecs[i], eig_vecs1[i])
 
+ker = construct_kernel(X_train, y_train, 50)
+r = min(np.linalg.matrix_rank(ker[0]), np.linalg.matrix_rank(ker[1]))
+mC, mG, mP, UU, TT = SpsdMean(cp.array(np.stack(ker)), r)
 sorted_score = score[idx]
 score_top20, score_top50 = sorted_score[:20], sorted_score[:50]
 idx_top20, idx_top50 = idx[:20], idx[:50]
@@ -82,21 +80,21 @@ X_fs = X_train[:, idx_top50]
 C_range = np.arange(-5, 15, 3)
 C_range = np.power(2*np.ones_like(C_range, dtype=np.float32), C_range)
 
-gamma_range = np.arange(-15, 6, 3)
-gamma_range = np.power(2*np.ones_like(gamma_range, dtype=np.float32), gamma_range)
-param_grid = dict(gamma=gamma_range, C=C_range)
-cv = KFold(n_splits=10, shuffle=True, random_state=42)
-grid = GridSearchCV(SVC(kernel="rbf"), param_grid=param_grid, cv=cv, scoring="accuracy", verbose=3, n_jobs=4)
-y_fs = (y_train == 9).astype(np.int8)
-y_test_fs = (y_test == 9).astype(np.int8)
-grid.fit(X_fs, y_fs)
-
-print(
-    "The best parameters are %s with a score of %0.2f"
-    % (grid.best_params_, grid.best_score_)
-)
-X_test_fs = X_test[:, idx_top50]
-print(accuracy_score(y_test_fs, grid.predict(X_test_fs)))
+# gamma_range = np.arange(-15, 6, 3)
+# gamma_range = np.power(2*np.ones_like(gamma_range, dtype=np.float32), gamma_range)
+# param_grid = dict(gamma=gamma_range, C=C_range)
+# cv = KFold(n_splits=10, shuffle=True, random_state=42)
+# grid = GridSearchCV(SVC(kernel="rbf"), param_grid=param_grid, cv=cv, scoring="accuracy", verbose=3, n_jobs=4)
+# y_fs = (y_train == 9).astype(np.int8)
+# y_test_fs = (y_test == 9).astype(np.int8)
+# grid.fit(X_fs, y_fs)
+#
+# print(
+#     "The best parameters are %s with a score of %0.2f"
+#     % (grid.best_params_, grid.best_score_)
+# )
+# X_test_fs = X_test[:, idx_top50]
+# print(accuracy_score(y_test_fs, grid.predict(X_test_fs)))
 # plt.rc('text', usetex=True)
 # plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
 
