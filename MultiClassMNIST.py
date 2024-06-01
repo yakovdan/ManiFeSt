@@ -1,5 +1,5 @@
 
-
+from oct2py import octave
 import cupy as cp
 import numpy as np
 import cv2
@@ -18,7 +18,7 @@ from SpsdMean import SpsdMean
 from tools import *
 from pymanopt.manifolds import Grassmann
 
-
+octave.addpath('/home/yakov/SPSD')
 # General Params
 random_state = 40
 n_samples_each_class = 6000
@@ -64,7 +64,7 @@ for exp_idx in range(1):
     best_percentile_for_estimator = None
     best_estimator = None
     best_params = None
-    PERCENTILES: list[int] = [30, 50, 70, 90, 95, 99]
+    PERCENTILES: list[int] = [30, 50, 70, 90, 95, 99, 100]
     for cur_percentile in PERCENTILES:
         print(f"Percentile {cur_percentile}")
         # Compute kernels
@@ -72,32 +72,95 @@ for exp_idx in range(1):
         kernels = construct_kernel(x_train, y_train, cur_percentile)
 
         # Compute minimal rank in our kernels
-        min_rank = 300  #min([np.linalg.matrix_rank(K, tol=5e-3) for K in kernels])
-        print(f"min_rank: {min_rank}")
-        # Compute M from kernels
-        kernels = np.stack(kernels, axis=0)
-        kernels = cp.array(kernels)
-        M, mG, mP, UU, TT = SpsdMean(kernels, r=min_rank)
-        #M, mG, mP, UU, TT = cp.load('M.cpy.npy'), cp.load('mG.cpy.npy'), cp.load('mP.cpy.npy'), cp.load('UU.cpy.npy'), cp.load('TT.cpy.npy')
+        min_rank = min([np.linalg.matrix_rank(K, tol=5e-3) for K in kernels])
+        # print(f"min_rank: {min_rank}")
+        # # Compute M from kernels
+        # kernels_oct = np.stack(kernels, axis=2)
+        # kernels_cp = cp.array(np.stack(kernels))
+        # octave.eval("""function [mC, mG, mP, UU, TT] = roundtrip(y, req_rank)
+        # %
+        # l = size(y, 3);
+        # CC{l} = [];
+        # for i=1:l
+        #     CC{i} = y(:, :, i);
+        # end
+        # size(CC);
+        # size(CC{1});
+        # [mC, mG, mP, UU, TT] = SpsdMean(CC, req_rank);
+        # """)
+        #
+        # M, mG, mP, UU, TT = octave.roundtrip(kernels_oct, min_rank, nout=5)
+        # M = cp.array(M)
+        # mG = cp.array(mG)
+        # mP = cp.array(mP)
+        # UUU = np.concatenate([UU.item(i)[None, :] for i in range(UU.size)], axis=0)
+        # TTT = np.concatenate([TT.item(i)[None, :] for i in range(TT.size)], axis=0)
+        # UU = cp.array(np.copy(UUU))
+        # TT = cp.array(np.copy(TTT))
+        #
+        # #M, mG, mP, UU, TT = SpsdMean(kernels, r=min_rank)
+        # #M, mG, mP, UU, TT = cp.load('M.cpy.npy'), cp.load('mG.cpy.npy'), cp.load('mP.cpy.npy'), cp.load('UU.cpy.npy'), cp.load('TT.cpy.npy')
+        #
+        #
+        # N = kernels_cp.shape[0]
+        #
+        # G_, _, _, _, _ = spsd_geodesics(M, kernels_cp, 1, min_rank)
+        # logP_ = log_map(mP[None, :], TT)
+        # D_ = symmetrize(G_ @ logP_ @ cp.swapaxes(G_, -1, -2))
+        # eigvals, eigvecs = cp.linalg.eigh(D_)
+        # eigvecs_square = cp.square(eigvecs)
+        # eigvals_abs = cp.expand_dims(cp.abs(eigvals), axis=1)
+        # r = eigvals_abs * eigvecs_square
+        # r = r.sum(axis=2)
+        # score = cp.max(r, axis=0)
+        # idx = cp.argsort(score, axis=0)[::-1]
+        #
 
+        #
+        # cp.save(f'M_{cur_percentile}_1', M)
+        # cp.save(f'mG_{cur_percentile}_1', mG)
+        # cp.save(f'mP_{cur_percentile}_1', mP)
+        # cp.save(f'UU_{cur_percentile}_1', UU)
+        # cp.save(f'TT_{cur_percentile}_1', TT)
+        # cp.save(f'G_{cur_percentile}_1', G_)
+        # cp.save(f'D_{cur_percentile}_1', D_)
+        # cp.save(f'score_{cur_percentile}_1', score)
+        # cp.save(f'idx_{cur_percentile}_1', idx)
+        #
 
-        N = kernels.shape[0]
-
-        G_, _, _, _, _ = spsd_geodesics(M, kernels, 1, min_rank)
-        logP_ = log_map(mP[None, :], TT)
-        D_ = symmetrize(G_ @ logP_ @ cp.swapaxes(G_, -1, -2))
+        M = cp.load(f'M_{cur_percentile}_1.npy')
+        mG = cp.load(f'mG_{cur_percentile}_1.npy')
+        mP = cp.load(f'mP_{cur_percentile}_1.npy')
+        UU = cp.load(f'UU_{cur_percentile}_1.npy')
+        TT = cp.load(f'TT_{cur_percentile}_1.npy')
+        G_ = cp.load(f'G_{cur_percentile}_1.npy')
+        D_ = cp.load(f'D_{cur_percentile}_1.npy')
         eigvals, eigvecs = cp.linalg.eigh(D_)
         eigvecs_square = cp.square(eigvecs)
         eigvals_abs = cp.expand_dims(cp.abs(eigvals), axis=1)
-        r = eigvals_abs * eigvecs_square
-        r = r.sum(axis=2)
-        score = cp.max(r, axis=0)
-        idx = cp.argsort(score, axis=0)[::-1]
-        idx_top50 = idx[:50]#cp.random.choice(cp.arange(784), size=50, replace=False)#idx[:50]
+        score = cp.load(f'score_{cur_percentile}_1.npy')
+        idx = cp.load(f'idx_{cur_percentile}_1.npy')
+        idx_top50 = idx[:50]  # cp.random.choice(cp.arange(784), size=50, replace=False)#idx[:50]
         top50_features = [(x // 28, x % 28) for x in idx_top50]
+        score_viz = cp.abs(score).get().reshape((1, 28, 28))
+        score_viz_sq = np.square(score_viz)
+        visualize_digit(score_viz, 0, top50_features, some_title=f"score_{cur_percentile}_rank_{min_rank}", mode =0)
+        visualize_digit(score_viz_sq, 0, top50_features, some_title=f"score_sq_{cur_percentile}_rank_{min_rank}", mode=0)
 
-        visualize_digit(score.get().reshape((1, 28, 28)), 0, top50_features)
+        eig_vec_for_viz = cp.abs(eigvecs[4, :, -1]).get().reshape((1, 28, 28))
+        visualize_digit(eig_vec_for_viz, 0, top50_features, some_title=f"4_{cur_percentile}_rank_{min_rank}")
+        eig_vec_for_viz = np.square(eig_vec_for_viz)
+        visualize_digit(eig_vec_for_viz, 0, top50_features, some_title=f"4_sq_{cur_percentile}_rank_{min_rank}")
 
+        eig_vec_for_viz = cp.abs(eigvecs[0, :, -1]).get().reshape((1, 28, 28))
+        visualize_digit(eig_vec_for_viz, 0, top50_features, some_title=f"0_{cur_percentile}_rank_{min_rank}")
+        eig_vec_for_viz = np.square(eig_vec_for_viz)
+        visualize_digit(eig_vec_for_viz, 0, top50_features, some_title=f"0_sq_{cur_percentile}_rank_{min_rank}")
+
+        eig_vec_for_viz = cp.abs(eigvecs[3, :, -1]).get().reshape((1, 28, 28))
+        visualize_digit(eig_vec_for_viz, 0, top50_features, some_title=f"3_{cur_percentile}_rank_{min_rank}")
+        eig_vec_for_viz = np.square(eig_vec_for_viz)
+        visualize_digit(eig_vec_for_viz, 0, top50_features, some_title=f"3_sq_{cur_percentile}_rank_{min_rank}")
         # Define ranges for C and gamma parameters of SVM
 
         x_fs = x_train.reshape(x_train.shape[0], -1)[:, idx_top50.get()]
