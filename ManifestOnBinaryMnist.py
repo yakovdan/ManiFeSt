@@ -66,7 +66,7 @@ def visualize_digit(digit_array: np.ndarray, digit_idx: int, feature_coords, res
             ax.add_patch(circ)
     filename = some_title.replace(" ", "_") + ".png"
     fig.savefig(filename, bbox_inches='tight', pad_inches=0)
-    plt.show()
+    #plt.show()
 
 
 if __name__ == "__main__":
