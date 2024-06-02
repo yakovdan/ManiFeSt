@@ -2,29 +2,22 @@
 from oct2py import octave
 import cupy as cp
 import numpy as np
-import cv2
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-from matplotlib.patches import Circle
+
 from keras.datasets import mnist
 from sklearn.model_selection import train_test_split, KFold, GridSearchCV
 from sklearn.svm import SVC
-from sklearn.metrics import accuracy_score
-
-from ManiFeSt import ManiFeSt
 from Manifest2 import ManiFeSt2, construct_kernel, spsd_geodesics
 from ManifestOnBinaryMnist import visualize_digit
-from SpsdMean import SpsdMean
 from tools import *
-from pymanopt.manifolds import Grassmann
 
 STORE_MODE = True
 DISABLE_SAVE = True
 VISUALIZE = False
-octave.addpath('/home/yakov/SPSD')
+octave.addpath('./SPSD')
+
 # General Params
 random_state = 40
-n_samples_each_class = 6000
+
 np.random.seed(random_state)
 # load MNIST dataset 4 and 9 digits
 (X, y), (_, _) = mnist.load_data()
@@ -68,7 +61,7 @@ for exp_idx in range(10):
     best_percentile_for_estimator = None
     best_estimator = None
     best_params = None
-    PERCENTILES: list[int] = [50]
+    PERCENTILES: list[int] = [100]
     for cur_percentile in PERCENTILES:
         print(f"Percentile {cur_percentile}")
         # Compute kernels
@@ -81,6 +74,7 @@ for exp_idx in range(10):
             # Compute M from kernels
             kernels_oct = np.stack(kernels, axis=2)
             kernels_cp = cp.array(np.stack(kernels))
+            #### calculate SPSD mean using Octave
             octave.eval("""function [mC, mG, mP, UU, TT] = roundtrip(y, req_rank)
             %
             l = size(y, 3);
@@ -101,11 +95,6 @@ for exp_idx in range(10):
             TTT = np.concatenate([TT.item(i)[None, :] for i in range(TT.size)], axis=0)
             UU = cp.array(np.copy(UUU))
             TT = cp.array(np.copy(TTT))
-
-            #M, mG, mP, UU, TT = SpsdMean(kernels, r=min_rank)
-            #M, mG, mP, UU, TT = cp.load('M.cpy.npy'), cp.load('mG.cpy.npy'), cp.load('mP.cpy.npy'), cp.load('UU.cpy.npy'), cp.load('TT.cpy.npy')
-
-
             N = kernels_cp.shape[0]
 
             G_, _, _, _, _ = spsd_geodesics(M, kernels_cp, 1, min_rank)
@@ -146,7 +135,7 @@ for exp_idx in range(10):
             eigvecs_square = cp.square(eigvecs)
             eigvals_abs = cp.expand_dims(cp.abs(eigvals), axis=1)
 
-        idx_top50 = idx#[:100]  # cp.random.choice(cp.arange(784), size=50, replace=False)#idx[:50]
+        idx_top50 = idx[:50]
         top50_features = [(x // 28, x % 28) for x in idx_top50]
         score_viz = cp.abs(score).get().reshape((1, 28, 28))
         score_viz_sq = np.square(score_viz)
