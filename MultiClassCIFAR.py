@@ -3,20 +3,18 @@ from oct2py import octave
 import cupy as cp
 import numpy as np
 import cv2
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-from matplotlib.patches import Circle
-from keras.datasets import mnist
+
+
 from sklearn.model_selection import train_test_split, KFold, GridSearchCV
 from sklearn.svm import SVC
-from sklearn.metrics import accuracy_score
 
-from ManiFeSt import ManiFeSt
+
+
 from Manifest2 import ManiFeSt2, construct_kernel, spsd_geodesics
 from ManifestOnBinaryMnist import visualize_digit
-from SpsdMean import SpsdMean
+
 from tools import *
-from pymanopt.manifolds import Grassmann
+
 
 import torchvision
 import torchvision.transforms as transforms
@@ -26,13 +24,13 @@ DISABLE_SAVE = True
 VISUALIZE = True
 grayscale = True
 
-octave.addpath('/home/romariozarik/Desktop/SPSD')
+octave.addpath('./SPSD')
 # General Params
 random_state = 40
-n_samples_each_class = 6000
+
 np.random.seed(random_state)
 # load MNIST dataset 4 and 9 digits
-(X, y), (_, _) = mnist.load_data()
+
 
 if grayscale:
     transform = transforms.Compose([
