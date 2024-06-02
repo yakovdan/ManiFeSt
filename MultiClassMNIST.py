@@ -19,7 +19,8 @@ from tools import *
 from pymanopt.manifolds import Grassmann
 
 STORE_MODE = True
-
+DISABLE_SAVE = True
+VISUALIZE = False
 octave.addpath('/home/yakov/SPSD')
 # General Params
 random_state = 40
@@ -35,7 +36,8 @@ gamma_range = np.arange(-15, 6, 3)
 gamma_range = np.power(2 * np.ones_like(gamma_range, dtype=np.float64), gamma_range)
 param_grid = dict(gamma=gamma_range, C=C_range)
 accuracies = []
-for exp_idx in range(1):
+train_accuracies = []
+for exp_idx in range(10):
 
     # Randomize data
     idx = np.arange(60000)
@@ -66,7 +68,7 @@ for exp_idx in range(1):
     best_percentile_for_estimator = None
     best_estimator = None
     best_params = None
-    PERCENTILES: list[int] = [30, 50, 70, 90, 95, 99, 100]
+    PERCENTILES: list[int] = [50]
     for cur_percentile in PERCENTILES:
         print(f"Percentile {cur_percentile}")
         # Compute kernels
@@ -117,18 +119,17 @@ for exp_idx in range(1):
             score = cp.max(r, axis=0)
             idx = cp.argsort(score, axis=0)[::-1]
 
-
-
-            cp.save(f'M_{cur_percentile}_1', M)
-            cp.save(f'mG_{cur_percentile}_1', mG)
-            cp.save(f'mP_{cur_percentile}_1', mP)
-            cp.save(f'UU_{cur_percentile}_1', UU)
-            cp.save(f'TT_{cur_percentile}_1', TT)
-            cp.save(f'G_{cur_percentile}_1', G_)
-            cp.save(f'D_{cur_percentile}_1', D_)
-            cp.save(f'score_{cur_percentile}_1', score)
-            cp.save(f'idx_{cur_percentile}_1', idx)
-            cp.save(f'kernels_{cur_percentile}_1', kernels_cp)
+            if not DISABLE_SAVE:
+                cp.save(f'M_{cur_percentile}_1', M)
+                cp.save(f'mG_{cur_percentile}_1', mG)
+                cp.save(f'mP_{cur_percentile}_1', mP)
+                cp.save(f'UU_{cur_percentile}_1', UU)
+                cp.save(f'TT_{cur_percentile}_1', TT)
+                cp.save(f'G_{cur_percentile}_1', G_)
+                cp.save(f'D_{cur_percentile}_1', D_)
+                cp.save(f'score_{cur_percentile}_1', score)
+                cp.save(f'idx_{cur_percentile}_1', idx)
+                cp.save(f'kernels_{cur_percentile}_1', kernels_cp)
 
         else:
             M = cp.load(f'M_{cur_percentile}_1.npy')
@@ -145,17 +146,18 @@ for exp_idx in range(1):
             eigvecs_square = cp.square(eigvecs)
             eigvals_abs = cp.expand_dims(cp.abs(eigvals), axis=1)
 
-        idx_top50 = idx[:50]  # cp.random.choice(cp.arange(784), size=50, replace=False)#idx[:50]
+        idx_top50 = idx#[:100]  # cp.random.choice(cp.arange(784), size=50, replace=False)#idx[:50]
         top50_features = [(x // 28, x % 28) for x in idx_top50]
         score_viz = cp.abs(score).get().reshape((1, 28, 28))
         score_viz_sq = np.square(score_viz)
-        visualize_digit(score_viz, 0, top50_features, some_title=f"score_{cur_percentile}_rank_{min_rank}", mode =0)
-        visualize_digit(score_viz_sq, 0, top50_features, some_title=f"score_sq_{cur_percentile}_rank_{min_rank}", mode=0)
-        for class_idx in range(10):
-            eig_vec_for_viz = cp.abs(eigvecs[class_idx, :, -1]).get().reshape((1, 28, 28))
-            visualize_digit(eig_vec_for_viz, 0, top50_features, some_title=f"{class_idx}_{cur_percentile}_rank_{min_rank}")
-            eig_vec_for_viz = np.square(eig_vec_for_viz)
-            visualize_digit(eig_vec_for_viz, 0, top50_features, some_title=f"{class_idx}_sq_{cur_percentile}_rank_{min_rank}")
+        if VISUALIZE:
+            visualize_digit(score_viz, 0, top50_features, some_title=f"score_{cur_percentile}_rank_{min_rank}", mode =0)
+            visualize_digit(score_viz_sq, 0, top50_features, some_title=f"score_sq_{cur_percentile}_rank_{min_rank}", mode=0)
+            for class_idx in range(10):
+                eig_vec_for_viz = cp.abs(eigvecs[class_idx, :, -1]).get().reshape((1, 28, 28))
+                visualize_digit(eig_vec_for_viz, 0, top50_features, some_title=f"{class_idx}_{cur_percentile}_rank_{min_rank}")
+                eig_vec_for_viz = np.square(eig_vec_for_viz)
+                visualize_digit(eig_vec_for_viz, 0, top50_features, some_title=f"{class_idx}_sq_{cur_percentile}_rank_{min_rank}")
 
 
         x_fs = x_train.reshape(x_train.shape[0], -1)[:, idx_top50.get()]
@@ -174,6 +176,7 @@ for exp_idx in range(1):
             print("Found new best SVM")
         print(
             f"Percentile: {cur_percentile}\t The best parameters are {grid.best_params_} with a score of %{ 100* grid.best_score_:.5f}")
+        train_accuracies.append(grid.best_score_)
         #print(f"The best parameters are {grid.best_params_} with a score of %{grid.best_score_:.5f}")
 
     x_test_fs = x_test.reshape(x_test.shape[0], -1)[:, best_features_idx.get()]
@@ -183,7 +186,8 @@ for exp_idx in range(1):
     accuracy = (y_test_fs == y_target).sum() / y_target.shape[0]
     print(f"Final accuracy: {accuracy}")
     accuracies.append(accuracy)
+    print(f"train acc: {train_accuracies}, mean: {np.mean(np.array(train_accuracies))}, std: {np.std(np.array(train_accuracies))}")
     # print(
     #     f"Test: {best_percentile_for_estimator}\t Test Accuracy: {accuracy_score(y_test_fs, best_estimator.predict(X_test_fs)):.5f}")
 
-print(sum(accuracies) / len(accuracies))
+print(f"test acc: {accuracies}, mean: {np.mean(np.array(accuracies))}, std: {np.std(np.array(accuracies))}")
